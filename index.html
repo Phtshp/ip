@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>IP / VLSM калькулятор</title>
+<title>IP калькулятор</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{
@@ -24,8 +24,7 @@ input,select,button{
   padding:6px; font:inherit;
 }
 input,select{width:100%}
-button{cursor:pointer}
-button:hover{border-color:var(--accent)}
+button{cursor:pointer; margin-right:6px;}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{
   padding:6px 8px;
@@ -35,38 +34,44 @@ th,td{
 th{background:var(--panel);font-family:inherit}
 .hidden{display:none}
 .error{color:#ff5a5a;margin-top:6px}
-hr{margin:24px 0;border:0;border-top:1px solid var(--border)}
+hr{margin:20px 0;border:0;border-top:1px solid var(--border)}
 </style>
 </head>
 
 <body class="dark">
 
-<h1>IP-калькулятор</h1>
+<div class="tabs">
+  <button onclick="toggleTheme()">Тема</button>
+</div>
+
+<!-- IP калькулятор без заголовка -->
+<div id="tab-ip">
 
 <label>IP / маска</label>
 <input id="ipInput" placeholder="192.168.1.10/24 или 192.168.1.10 255.255.255.0">
 
 <div style="margin-top:10px">
-<button onclick="clearIP()">Очистить</button>
-<button onclick="copyIP()">Копировать</button>
-<button onclick="toggle('ipAdv')">Расширенные</button>
-<button onclick="toggle('maskTable')">Таблица масок</button>
-<button onclick="toggleTheme()">Тема</button>
+  <button onclick="clearIP()">Очистить</button>
+  <button onclick="copyIP()">Копировать</button>
+  <button onclick="toggle('ipAdv')">Расширенные</button>
+  <button onclick="toggle('maskTable')">Таблица масок</button>
+  <button onclick="toggle('tab-vlsm')">Деление сети</button>
+  <button onclick="toggleTheme()">Тема</button>
 </div>
 
 <div id="ipAdv" class="hidden">
-<label>Номер хоста</label>
-<input id="ipHostIndex" type="number" min="1">
+  <label>Номер хоста</label>
+  <input id="ipHostIndex" type="number" min="1">
 
-<label>Считать хост</label>
-<select id="ipHostFrom">
-  <option value="start">От начала</option>
-  <option value="end">С конца</option>
-</select>
+  <label>Считать хост</label>
+  <select id="ipHostFrom">
+    <option value="start">От начала</option>
+    <option value="end">С конца</option>
+  </select>
 
-<div id="ipHostResult" class="hidden">
-IP хоста: <b><span id="ipHostValue"></span></b>
-</div>
+  <div id="ipHostResult" class="hidden">
+    IP хоста: <b><span id="ipHostValue"></span></b>
+  </div>
 </div>
 
 <table id="ipResult" class="hidden">
@@ -75,17 +80,35 @@ IP хоста: <b><span id="ipHostValue"></span></b>
 <tr><th>Broadcast</th><td id="rBc"></td></tr>
 <tr><th>Первый usable</th><td id="rFirst"></td></tr>
 <tr><th>Последний usable</th><td id="rLast"></td></tr>
-<tr><th>Usable адресов</th><td id="rUsable"></td></tr>
+<tr><th>Usable</th><td id="rUsable"></td></tr>
 <tr><th>Всего адресов</th><td id="rTotal"></td></tr>
 </tbody>
 </table>
 
-<hr>
+<div id="maskTable" class="hidden">
+<h2>Таблица масок подсетей</h2>
+<table>
+<thead>
+<tr>
+<th>Префикс</th>
+<th>Маска</th>
+<th>Шаг сети</th>
+<th>Usable</th>
+<th>Адресов</th>
+<th>Биты</th>
+<th>Wildcard</th>
+</tr>
+</thead>
+<tbody id="maskBody"></tbody>
+</table>
+</div>
 
-<h2>VLSM / FLSM</h2>
+</div>
 
-<label>Базовая сеть</label>
-<input id="baseNet" placeholder="192.168.1.0/24">
+<!-- Деление сети (скрыто по умолчанию) -->
+<div id="tab-vlsm" class="hidden">
+
+<h1>Деление сети</h1>
 
 <label>Режим</label>
 <select id="mode">
@@ -122,22 +145,6 @@ IP хоста: <b><span id="ipHostValue"></span></b>
 <tbody></tbody>
 </table>
 
-<div id="maskTable" class="hidden">
-<h2>Таблица масок подсетей</h2>
-<table>
-<thead>
-<tr>
-<th>Префикс</th>
-<th>Маска</th>
-<th>Шаг сети</th>
-<th>Кол-во usable</th>
-<th>Кол-во адресов</th>
-<th>Битовая форма</th>
-<th>Обратная (wildcard)</th>
-</tr>
-</thead>
-<tbody id="maskBody"></tbody>
-</table>
 </div>
 
 <script>
@@ -145,18 +152,19 @@ const ipToInt=i=>i.split('.').reduce((a,b)=>a*256+ +b,0)>>>0;
 const intToIp=i=>[(i>>>24)&255,(i>>>16)&255,(i>>>8)&255,i&255].join('.');
 const maskFromPrefix=p=>p===0?0:(0xffffffff<<(32-p))>>>0;
 
+let ipState=null;
+
 function toggle(id){document.getElementById(id).classList.toggle('hidden')}
 function toggleTheme(){document.body.classList.toggle('light')}
 function clearIP(){ipInput.value='';ipResult.classList.add('hidden')}
 function copyIP(){
   if(!ipState) return;
   navigator.clipboard.writeText(
-    `Network: ${intToIp(ipState.net)}\nUsable: ${ipState.usable}\nTotal: ${ipState.total}`
+    `Network: ${intToIp(ipState.net)}/${ipState.prefix}`
   );
 }
 
-let ipState=null;
-
+/* IP калькулятор */
 ipInput.oninput=()=>{
   if(!ipInput.value.includes('/')) return;
   let [ip,p]=ipInput.value.split('/');
@@ -167,14 +175,16 @@ ipInput.oninput=()=>{
   let first=p>=31?net:net+1;
   let last=p>=31?bc:bc-1;
   let usable=p>=31?total:total-2;
-  ipState={net,first,last,usable,total};
-  rNet.textContent=intToIp(net);
+  ipState={net,first,last,usable,total,prefix:p};
+
+  rNet.textContent=intToIp(net)+`/${p}`;
   rBc.textContent=intToIp(bc);
   rFirst.textContent=intToIp(first);
   rLast.textContent=intToIp(last);
   rUsable.textContent=usable;
   rTotal.textContent=total;
   ipResult.classList.remove('hidden');
+  calcVLSM();
 };
 
 ipHostIndex.oninput=ipHostFrom.onchange=()=>{
@@ -187,6 +197,71 @@ ipHostIndex.oninput=ipHostFrom.onchange=()=>{
   ipHostValue.textContent=intToIp(ip);
   ipHostResult.classList.remove('hidden');
 };
+
+/* Деление сети */
+mode.onchange=()=>{
+  vlsmBlock.classList.toggle('hidden',mode.value!=='vlsm');
+  flsmCountBlock.classList.toggle('hidden',mode.value!=='flsmCount');
+  flsmHostsBlock.classList.toggle('hidden',mode.value!=='flsmHosts');
+  calcVLSM();
+};
+[vlsmHosts,flsmCount,flsmHosts].forEach(e=>e.oninput=calcVLSM);
+
+function calcVLSM(){
+  vlsmError.textContent='';
+  vlsmTable.classList.add('hidden');
+  if(!ipState){vlsmError.textContent='Сначала задайте сеть в IP-калькуляторе';return;}
+
+  let start=ipState.net;
+  let end=start+ipState.total-1;
+  let cur=start;
+  let tbody=vlsmTable.querySelector('tbody');
+  tbody.innerHTML='';
+
+  let prefixes=[];
+  if(mode.value==='vlsm'){
+    prefixes=vlsmHosts.value.split(',').map(x=>+x.trim()).filter(x=>x>0)
+      .sort((a,b)=>b-a).map(h=>32-Math.ceil(Math.log2(h+2)));
+  }
+  if(mode.value==='flsmCount'){
+    let n=+flsmCount.value;
+    if(n < 1){ vlsmError.textContent='Введите количество подсетей больше 0'; return; }
+    let pref=ipState.prefix+Math.ceil(Math.log2(n));
+    prefixes=Array(n).fill(pref);
+  }
+  if(mode.value==='flsmHosts'){
+    let h=+flsmHosts.value;
+    if(h < 1){ vlsmError.textContent='Введите число хостов больше 0'; return; }
+    let pref = 32 - Math.ceil(Math.log2(h+2));
+    let size = 2**(32-pref);
+    let count = Math.floor((end - start + 1) / size);
+    prefixes = Array(count).fill(pref);
+  }
+
+  for(let pref of prefixes){
+    let size=2**(32-pref);
+    let bc=cur+size-1;
+    if(bc>end){ vlsmError.textContent='Подсети выходят за пределы базовой сети'; return; }
+    let first=pref>=31?cur:cur+1;
+    let last=pref>=31?bc:bc-1;
+    let usable=pref>=31?size:size-2;
+
+    let tr=document.createElement('tr');
+    tr.innerHTML=`
+<td>${tbody.children.length+1}</td>
+<td>${intToIp(cur)}</td>
+<td>/${pref}</td>
+<td>${intToIp(maskFromPrefix(pref))}</td>
+<td>${size}</td>
+<td>${usable}</td>
+<td>${intToIp(first)}</td>
+<td>${intToIp(last)}</td>
+<td>${intToIp(bc)}</td>`;
+    tbody.appendChild(tr);
+    cur=bc+1;
+  }
+  vlsmTable.classList.remove('hidden');
+}
 
 /* таблица масок */
 const mb=document.getElementById('maskBody');
