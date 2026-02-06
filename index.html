@@ -13,100 +13,90 @@ body.light{
   --bg:#fff; --fg:#000; --panel:#f4f4f4;
   --border:#ddd; --accent:#0066cc;
 }
-body{
-  background:var(--bg); color:var(--fg);
-  font-family:Arial,sans-serif; margin:16px;
+body.gradient{
+  --fg:#fff; --panel:rgba(0,0,0,0.2); --border:rgba(255,255,255,0.2); --accent:#ffcc00;
+  animation: gradientBG 15s ease infinite;
+  background: linear-gradient(270deg, #111111, #333333, #111111, #000000);
+  background-size: 800% 800%;
 }
+body.colorGradient{
+  --fg:#fff; --panel:rgba(0,0,0,0.2); --border:rgba(255,255,255,0.2); --accent:#ffcc00;
+  animation: colorGradientBG 20s linear infinite;
+  background: linear-gradient(0deg, red, orange, yellow, green, cyan, blue, violet);
+  background-size: 800% 800%;
+}
+@keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+@keyframes colorGradientBG { 0%{background-position:0% 0%} 50%{background-position:100% 100%} 100%{background-position:0% 0%} }
+body{ background:var(--bg); color:var(--fg); font-family:Arial,sans-serif; margin:16px; transition: background 0.5s, color 0.5s;}
 label{display:block;margin-top:10px;font-weight:600}
-input,select,button{
-  background:var(--panel); color:var(--fg);
-  border:1px solid var(--border);
-  padding:6px; font:inherit;
-}
-input,select{width:100%}
-button{cursor:pointer; margin-right:6px;}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{
-  padding:6px 8px;
-  border-bottom:1px solid var(--border);
-  font-family:monospace
-}
-th{background:var(--panel);font-family:inherit}
-.hidden{display:none}
-.error{color:#ff5a5a;margin-top:6px}
-hr{margin:20px 0;border:0;border-top:1px solid var(--border)}
+input,select,button{ background:var(--panel); color:var(--fg); border:1px solid var(--border); padding:6px; font:inherit; }
+input,select{width:100%} button{cursor:pointer; margin-right:6px;}
+table{width:100%;border-collapse:collapse;margin-top:10px; table-layout: fixed;}
+th,td{ padding:6px 4px; border:1px solid var(--border); font-family:monospace; word-wrap: break-word; text-align:center;}
+th{background:var(--panel); font-family:inherit; position: sticky; top:0; z-index:2;}
+.hidden{display:none} .error{color:#ff5a5a;margin-top:6px}
+#vlsmTable { min-width:1200px; }
+#vlsmTableContainer { max-height:500px; overflow:auto; border:1px solid var(--border);}
 </style>
 </head>
-
 <body class="dark">
 
-<!-- Верхняя панель убрана -->
-
-<!-- IP калькулятор без заголовка -->
-<div id="tab-ip">
-
 <label>IP / маска</label>
-<input id="ipInput" placeholder="192.168.1.10/24 или 192.168.1.10 255.255.255.0">
+<input id="ipInput" placeholder="192.168.1.10/24">
 
 <div style="margin-top:10px">
   <button onclick="clearIP()">Очистить</button>
-  <button onclick="copyIP()">Копировать</button>
   <button onclick="toggle('ipAdv')">Расширенные</button>
   <button onclick="toggle('maskTable')">Таблица масок</button>
+  <button onclick="showNetwork()">Сеть</button>
   <button onclick="toggle('tab-vlsm')">Деление сети</button>
-  <button onclick="toggleTheme()">Тема</button>
+  <button onclick="cycleTheme()">Тема</button>
 </div>
 
 <div id="ipAdv" class="hidden">
   <label>Номер хоста</label>
   <input id="ipHostIndex" type="number" min="1">
-
   <label>Считать хост</label>
   <select id="ipHostFrom">
     <option value="start">От начала</option>
     <option value="end">С конца</option>
   </select>
-
   <div id="ipHostResult" class="hidden">
     IP хоста: <b><span id="ipHostValue"></span></b>
   </div>
 </div>
 
-<table id="ipResult" class="hidden">
-<tbody>
-<tr><th>Сеть</th><td id="rNet"></td></tr>
-<tr><th>Broadcast</th><td id="rBc"></td></tr>
-<tr><th>Первый usable</th><td id="rFirst"></td></tr>
-<tr><th>Последний usable</th><td id="rLast"></td></tr>
-<tr><th>Usable</th><td id="rUsable"></td></tr>
-<tr><th>Всего адресов</th><td id="rTotal"></td></tr>
-</tbody>
-</table>
-
 <div id="maskTable" class="hidden">
-<h2>Таблица масок подсетей</h2>
-<table>
-<thead>
-<tr>
-<th>Префикс</th>
-<th>Маска</th>
-<th>Шаг сети</th>
-<th>Usable</th>
-<th>Адресов</th>
-<th>Биты</th>
-<th>Wildcard</th>
-</tr>
-</thead>
-<tbody id="maskBody"></tbody>
-</table>
+  <h2>Таблица масок подсетей</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Префикс</th><th>Маска</th><th>Шаг сети</th>
+        <th>Usable</th><th>Адресов</th><th>Биты</th><th>Wildcard</th>
+      </tr>
+    </thead>
+    <tbody id="maskBody"></tbody>
+  </table>
 </div>
 
+<div id="tab-network" class="hidden">
+  <h2>Сеть</h2>
+  <table id="ipResult">
+    <tbody>
+      <tr><th>Сеть</th><td id="rNet"></td></tr>
+      <tr><th>Маска</th><td id="rMask"></td></tr> <!-- Маска добавлена -->
+      <tr><th>Broadcast</th><td id="rBc"></td></tr>
+      <tr><th>Первый usable</th><td id="rFirst"></td></tr>
+      <tr><th>Последний usable</th><td id="rLast"></td></tr>
+      <tr><th>Usable</th><td id="rUsable"></td></tr>
+      <tr><th>Всего адресов</th><td id="rTotal"></td></tr>
+      <tr><th>IP Range</th><td id="rRange"></td></tr>
+    </tbody>
+  </table>
 </div>
 
-<!-- Деление сети (скрыто по умолчанию) -->
 <div id="tab-vlsm" class="hidden">
-
-<h1>Деление сети</h1>
+<h2>Деление сети</h2>
 
 <label>Режим</label>
 <select id="mode">
@@ -117,7 +107,7 @@ hr{margin:20px 0;border:0;border-top:1px solid var(--border)}
 
 <div id="vlsmBlock">
 <label>Хосты (через запятую)</label>
-<input id="vlsmHosts" placeholder="50, 20, 10, 5">
+<input id="vlsmHosts" placeholder="50,20,10,5">
 </div>
 
 <div id="flsmCountBlock" class="hidden">
@@ -131,18 +121,17 @@ hr{margin:20px 0;border:0;border-top:1px solid var(--border)}
 </div>
 
 <div id="vlsmError" class="error"></div>
-
+<div id="vlsmTableContainer">
 <table id="vlsmTable" class="hidden">
 <thead>
 <tr>
 <th>#</th><th>Сеть</th><th>/</th><th>Маска</th>
-<th>Всего</th><th>Usable</th>
+<th>Всего</th><th>Usable</th><th>Неиспользуемые</th>
 <th>Первый</th><th>Последний</th><th>Broadcast</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
-
 </div>
 
 <script>
@@ -150,53 +139,57 @@ const ipToInt=i=>i.split('.').reduce((a,b)=>a*256+ +b,0)>>>0;
 const intToIp=i=>[(i>>>24)&255,(i>>>16)&255,(i>>>8)&255,i&255].join('.');
 const maskFromPrefix=p=>p===0?0:(0xffffffff<<(32-p))>>>0;
 
-let ipState=null;
+let ipState=null, themeIndex=0;
 
 function toggle(id){document.getElementById(id).classList.toggle('hidden')}
-function toggleTheme(){document.body.classList.toggle('light')}
-function clearIP(){ipInput.value='';ipResult.classList.add('hidden')}
-function copyIP(){
-  if(!ipState) return;
-  navigator.clipboard.writeText(
-    `Network: ${intToIp(ipState.net)}/${ipState.prefix}`
-  );
+function cycleTheme(){
+  themeIndex=(themeIndex+1)%4;
+  document.body.classList.remove('dark','light','gradient','colorGradient');
+  if(themeIndex===0) document.body.classList.add('dark');
+  if(themeIndex===1) document.body.classList.add('light');
+  if(themeIndex===2) document.body.classList.add('gradient');
+  if(themeIndex===3) document.body.classList.add('colorGradient');
+}
+function clearIP(){ 
+  ipInput.value=''; 
+  ipState=null; 
+  document.getElementById('tab-network').classList.add('hidden'); 
+  ipHostResult.classList.add('hidden'); 
+  vlsmTable.classList.add('hidden');
 }
 
-/* IP калькулятор */
-ipInput.oninput=()=>{
-  if(!ipInput.value.includes('/')) return;
-  let [ip,p]=ipInput.value.split('/');
-  p=+p;
-  let net=ipToInt(ip)&maskFromPrefix(p);
-  let total=2**(32-p);
-  let bc=net+total-1;
-  let first=p>=31?net:net+1;
-  let last=p>=31?bc:bc-1;
-  let usable=p>=31?total:total-2;
-  ipState={net,first,last,usable,total,prefix:p};
-
-  rNet.textContent=intToIp(net)+`/${p}`;
+function parseIPInput(){
+  let val=ipInput.value.trim(); if(!val) return false;
+  if(!val.includes('/')) return false;
+  let [ip,prefix]=val.split('/'); prefix=+prefix;
+  let net=ipToInt(ip)&maskFromPrefix(prefix);
+  let total=2**(32-prefix), bc=net+total-1;
+  let first=prefix>=31?net:net+1, last=prefix>=31?bc:bc-1, usable=prefix>=31?total:total-2;
+  ipState={net,first,last,usable,total,prefix};
+  rNet.textContent=intToIp(net)+`/${prefix}`;
+  rMask.textContent=intToIp(maskFromPrefix(prefix));
   rBc.textContent=intToIp(bc);
   rFirst.textContent=intToIp(first);
   rLast.textContent=intToIp(last);
   rUsable.textContent=usable;
   rTotal.textContent=total;
-  ipResult.classList.remove('hidden');
-  calcVLSM();
-};
+  rRange.textContent=intToIp(first)+' - '+intToIp(last);
+  return true;
+}
+
+// Автообновление VLSM при изменении IP
+ipInput.oninput=()=>{ parseIPInput(); calcVLSM(); };
 
 ipHostIndex.oninput=ipHostFrom.onchange=()=>{
   if(!ipState) return;
-  let n=+ipHostIndex.value;
-  if(n<1||n>ipState.usable) return;
-  let ip=ipHostFrom.value==='start'
-    ? ipState.first+(n-1)
-    : ipState.last-(n-1);
+  let n=+ipHostIndex.value; if(n<1||n>ipState.usable) return;
+  let ip=ipHostFrom.value==='start'?ipState.first+(n-1):ipState.last-(n-1);
   ipHostValue.textContent=intToIp(ip);
   ipHostResult.classList.remove('hidden');
 };
 
-/* Деление сети */
+function showNetwork(){ if(parseIPInput()) toggle('tab-network'); }
+
 mode.onchange=()=>{
   vlsmBlock.classList.toggle('hidden',mode.value!=='vlsm');
   flsmCountBlock.classList.toggle('hidden',mode.value!=='flsmCount');
@@ -206,81 +199,54 @@ mode.onchange=()=>{
 [vlsmHosts,flsmCount,flsmHosts].forEach(e=>e.oninput=calcVLSM);
 
 function calcVLSM(){
-  vlsmError.textContent='';
+  vlsmError.textContent=''; 
   vlsmTable.classList.add('hidden');
-  if(!ipState){vlsmError.textContent='Сначала задайте сеть в IP-калькуляторе';return;}
-
-  let start=ipState.net;
-  let end=start+ipState.total-1;
-  let cur=start;
-  let tbody=vlsmTable.querySelector('tbody');
-  tbody.innerHTML='';
-
-  let prefixes=[];
+  if(!ipState){ vlsmError.textContent='Сначала задайте корректный IP'; return; }
+  let start=ipState.net, end=start+ipState.total-1, cur=start;
+  let tbody=vlsmTable.querySelector('tbody'); tbody.innerHTML='';
+  let prefixes=[], reqHosts=[];
   if(mode.value==='vlsm'){
-    prefixes=vlsmHosts.value.split(',').map(x=>+x.trim()).filter(x=>x>0)
-      .sort((a,b)=>b-a).map(h=>32-Math.ceil(Math.log2(h+2)));
-  }
-  if(mode.value==='flsmCount'){
-    let n=+flsmCount.value;
-    if(n < 1){ vlsmError.textContent='Введите количество подсетей больше 0'; return; }
+    reqHosts=vlsmHosts.value.split(',').map(x=>+x.trim()).filter(x=>x>0).sort((a,b)=>b-a);
+    prefixes=reqHosts.map(h=>32-Math.ceil(Math.log2(h+2)));
+  } else if(mode.value==='flsmCount'){
+    let n=+flsmCount.value; if(n<1){vlsmError.textContent='Введите количество подсетей'; return;}
     let pref=ipState.prefix+Math.ceil(Math.log2(n));
-    prefixes=Array(n).fill(pref);
+    prefixes=Array(n).fill(pref); reqHosts=Array(n).fill(0);
+  } else if(mode.value==='flsmHosts'){
+    let h=+flsmHosts.value; if(h<1){vlsmError.textContent='Введите число хостов'; return;}
+    let pref=32-Math.ceil(Math.log2(h+2)), subnetSize=2**(32-pref);
+    let count=Math.floor(ipState.total/subnetSize);
+    if(count<1){vlsmError.textContent='Слишком много хостов для сети'; return;}
+    if(count>1000){vlsmError.textContent='Слишком много подсетей'; return;}
+    prefixes=Array(count).fill(pref); reqHosts=Array(count).fill(h);
   }
-  if(mode.value==='flsmHosts'){
-    let h=+flsmHosts.value;
-    if(h < 1){ vlsmError.textContent='Введите число хостов больше 0'; return; }
-    let pref = 32 - Math.ceil(Math.log2(h+2));
-    let size = 2**(32-pref);
-    let count = Math.floor((end - start + 1) / size);
-    prefixes = Array(count).fill(pref);
-  }
-
-  for(let pref of prefixes){
-    let size=2**(32-pref);
-    let bc=cur+size-1;
-    if(bc>end){ vlsmError.textContent='Подсети выходят за пределы базовой сети'; return; }
-    let first=pref>=31?cur:cur+1;
-    let last=pref>=31?bc:bc-1;
-    let usable=pref>=31?size:size-2;
-
+  for(let i=0;i<prefixes.length;i++){
+    let pref=prefixes[i], size=2**(32-pref), bc=cur+size-1;
+    if(bc>end){vlsmError.textContent='Подсети выходят за пределы сети'; return;}
+    let first=pref>=31?cur:cur+1, last=pref>=31?bc:bc-1, usable=pref>=31?size:size-2;
+    let unused=usable-(reqHosts[i]||0);
+    if(unused<0) unused=0;
     let tr=document.createElement('tr');
     tr.innerHTML=`
-<td>${tbody.children.length+1}</td>
-<td>${intToIp(cur)}</td>
-<td>/${pref}</td>
-<td>${intToIp(maskFromPrefix(pref))}</td>
-<td>${size}</td>
-<td>${usable}</td>
-<td>${intToIp(first)}</td>
-<td>${intToIp(last)}</td>
-<td>${intToIp(bc)}</td>`;
-    tbody.appendChild(tr);
-    cur=bc+1;
+<td>${i+1}</td><td>${intToIp(cur)}</td><td>/${pref}</td><td>${intToIp(maskFromPrefix(pref))}</td>
+<td>${size}</td><td>${usable}</td><td>${unused}</td>
+<td>${intToIp(first)}</td><td>${intToIp(last)}</td><td>${intToIp(bc)}</td>`;
+    tbody.appendChild(tr); cur=bc+1;
   }
   vlsmTable.classList.remove('hidden');
 }
 
-/* таблица масок */
+/* Таблица масок */
 const mb=document.getElementById('maskBody');
 for(let p=0;p<=32;p++){
   let mask=maskFromPrefix(p);
-  let total=2**(32-p);
-  let usable=p>=31?total:total-2;
+  let total=2**(32-p), usable=p>=31?total:total-2;
   let wildcard=(~mask)>>>0;
   let bits=mask.toString(2).padStart(32,'0');
-  let step=p%8===0?256:2**(8-(p%8));
-  let oct=Math.floor(p/8)+1;
-  mb.innerHTML+=`
-<tr>
-<td>/${p}</td>
-<td>${intToIp(mask)}</td>
-<td>${step} (в ${oct}-м октете)</td>
-<td>${usable}</td>
-<td>${total}</td>
-<td>${bits}</td>
-<td>${intToIp(wildcard)}</td>
-</tr>`;
+  let step=p%8===0?256:2**(8-(p%8)), oct=Math.floor(p/8)+1;
+  mb.innerHTML+=`<tr>
+<td>/${p}</td><td>${intToIp(mask)}</td><td>${step} (в ${oct}-м октете)</td>
+<td>${usable}</td><td>${total}</td><td>${bits}</td><td>${intToIp(wildcard)}</td></tr>`;
 }
 </script>
 </body>
