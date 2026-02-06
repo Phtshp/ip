@@ -3,31 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
     <title>IP Calculator</title>
+    <script>
+        function calculate() {
+            const ipParts = document.getElementById('ipInput').value.split('.');
+            const subnet = document.getElementById('subnetMask').value;
+            const cidr = parseInt(subnet.split('/')[1]);
+
+            // Calculate network address, broadcast address, etc.
+            const binaryIP = ipParts.map(part => parseInt(part).toString(2).padStart(8, '0')).join('');
+            const subnetBinary = '1'.repeat(cidr) + '0'.repeat(32 - cidr);
+
+            const network = binaryIP.slice(0, cidr) + '0'.repeat(32 - cidr);
+            const broadcast = binaryIP.slice(0, cidr) + '1'.repeat(32 - cidr);
+
+            const firstUsable = network.slice(0, -1) + '1';
+            const lastUsable = broadcast.slice(0, -1) + '0';
+
+            // Convert binary addresses to decimal
+            const toDecimal = (binary) => {
+                return binary.match(/.{1,8}/g).map(byte => parseInt(byte, 2)).join('.');
+            };
+
+            document.getElementById('networkAddress').innerText = `Network Address: ${toDecimal(network)}`;
+            document.getElementById('broadcastAddress').innerText = `Broadcast Address: ${toDecimal(broadcast)}`;
+            document.getElementById('firstUsable').innerText = `First Usable Host: ${toDecimal(firstUsable)}`;
+            document.getElementById('lastUsable').innerText = `Last Usable Host: ${toDecimal(lastUsable)}`;
+            document.getElementById('totalHosts').innerText = `Total Hosts: ${Math.pow(2, (32 - cidr)) - 2}`;
+        }
+    </script>
 </head>
 <body>
-    <h1>Improved IP Calculator</h1>
-    <form id="ipForm">
-        <label for="ipAddress">IP Address:</label>
-        <input type="text" id="ipAddress" placeholder="e.g., 192.168.1.1" required>
-        <label for="subnetMask">Subnet Mask:</label>
-        <select id="subnetMask">
-            <option value="24">255.255.255.0 /24</option>
-            <option value="16">255.255.0.0 /16</option>
-            <option value="8">255.0.0.0 /8</option>
-            <option value="none">Custom</option>
-        </select>
-        <button type="submit">Calculate</button>
-    </form>
-    <div id="results">
-        <h2>Results</h2>
-        <p id="networkAddress">Network Address: </p>
-        <p id="broadcastAddress">Broadcast Address: </p>
-        <p id="firstHost">First Usable Host: </p>
-        <p id="lastHost">Last Usable Host: </p>
-        <p id="hostCount">Total Hosts: </p>
+    <h1>IP Address Calculator</h1>
+    <div>
+        <label for="ipInput">IP Address:</label>
+        <input type="text" id="ipInput" placeholder="e.g. 192.168.1.1" />
     </div>
-    <script src="script.js"></script>
+    <div>
+        <label for="subnetMask">Subnet Mask (CIDR):</label>
+        <select id="subnetMask">
+            <option value="/32">/32</option>
+            <option value="/31">/31</option>
+            <option value="/30">/30</option>
+            <option value="/29">/29</option>
+            <option value="/28">/28</option>
+            <option value="/27">/27</option>
+            <option value="/26">/26</option>
+            <option value="/25">/25</option>
+            <option value="/24">/24</option>
+            <option value="/23">/23</option>
+            <option value="/22">/22</option>
+            <option value="/21">/21</option>
+            <option value="/20">/20</option>
+            <option value="/19">/19</option>
+            <option value="/18">/18</option>
+            <option value="/17">/17</option>
+            <option value="/16">/16</option>
+            <option value="/15">/15</option>
+            <option value="/14">/14</option>
+            <option value="/13">/13</option>
+            <option value="/12">/12</option>
+            <option value="/11">/11</option>
+            <option value="/10">/10</option>
+            <option value="/9">/9</option>
+            <option value="/8">/8</option>
+            <option value="/7">/7</option>
+            <option value="/6">/6</option>
+            <option value="/5">/5</option>
+            <option value="/4">/4</option>
+            <option value="/3">/3</option>
+            <option value="/2">/2</option>
+            <option value="/1">/1</option>
+            <option value="/0">/0</option>
+        </select>
+    </div>
+    <button onclick="calculate()">Calculate</button>
+    <h3 id="networkAddress"></h3>
+    <h3 id="broadcastAddress"></h3>
+    <h3 id="firstUsable"></h3>
+    <h3 id="lastUsable"></h3>
+    <h3 id="totalHosts"></h3>
 </body>
 </html>
