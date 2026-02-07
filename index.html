@@ -219,48 +219,113 @@ mode.onchange=()=>{
 [vlsmHosts,flsmCount,flsmHosts].forEach(e=>e.oninput=calcVLSM);
 
 function calcVLSM(){
-  vlsmError.textContent=''; 
+  vlsmError.textContent = '';
   vlsmTable.classList.add('hidden');
-  if(!ipState){ vlsmError.textContent='Сначала задайте корректный IP'; return; }
-  let start=ipState.net, end=start+ipState.total-1, cur=start;
-  let tbody=vlsmTable.querySelector('tbody'); tbody.innerHTML='';
-  let prefixes=[], reqHosts=[];
-  if(mode.value==='vlsm'){
-    reqHosts = vlsmHosts.value
-  .trim()
-  .split(/[,\s]+/)   // ← запятая ИЛИ пробел (один или несколько)
-  .map(x => parseInt(x,10))
-  .filter(x => Number.isFinite(x) && x > 0)
-  .sort((a,b)=>b-a);
-    prefixes=reqHosts.map(h=>32-Math.ceil(Math.log2(h+2)));
-  } else if(mode.value==='flsmCount'){
-    let n=+flsmCount.value; if(n<1){vlsmError.textContent='Введите количество подсетей'; return;}
-    let pref=ipState.prefix+Math.ceil(Math.log2(n));
-    prefixes=Array(n).fill(pref); reqHosts=Array(n).fill(0);
-  } else if(mode.value==='flsmHosts'){
-    let h=+flsmHosts.value; if(h<1){vlsmError.textContent='Введите число хостов'; return;}
-    let pref=32-Math.ceil(Math.log2(h+2)), subnetSize=2**(32-pref);
-    let count=Math.floor(ipState.total/subnetSize);
-    if(count<1){vlsmError.textContent='Слишком много хостов для сети'; return;}
-    if(count>1000){vlsmError.textContent='Слишком много подсетей'; return;}
-    prefixes=Array(count).fill(pref); reqHosts=Array(count).fill(h);
+
+  if(!ipState) return;
+
+  let start = ipState.net;
+  let end   = start + ipState.total - 1;
+  let cur   = start;
+
+  let tbody = vlsmTable.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  let prefixes = [];
+  let reqHosts = [];
+
+  /* ===== VLSM ===== */
+  if(mode.value === 'vlsm'){
+    let raw = vlsmHosts.value.trim();
+    if(!raw) return;
+
+    reqHosts = raw
+      .split(/[,\s]+/)
+      .map(x => parseInt(x,10))
+      .filter(x => Number.isFinite(x) && x > 0)
+      .sort((a,b)=>b-a);
+
+    if(reqHosts.length === 0) return;
+
+    prefixes = reqHosts.map(h => 32 - Math.ceil(Math.log2(h + 2)));
   }
-  for(let i=0;i<prefixes.length;i++){
-    let pref=prefixes[i], size=2**(32-pref), bc=cur+size-1;
-    if(bc>end){vlsmError.textContent='Подсети выходят за пределы сети'; return;}
-    let first=pref>=31?cur:cur+1, last=pref>=31?bc:bc-1, usable=pref>=31?size:size-2;
-    let unused=usable-(reqHosts[i]||0);
-    if(unused<0) unused=0;
-    let tr=document.createElement('tr');
-    tr.innerHTML=`
-<td>${i+1}</td><td>${intToIp(cur)}</td><td>/${pref}</td><td>${intToIp(maskFromPrefix(pref))}</td>
-<td>${size}</td><td>${usable}</td><td>${unused}</td>
-<td>${intToIp(first)}</td><td>${intToIp(last)}</td><td>${intToIp(bc)}</td>`;
-    tbody.appendChild(tr); cur=bc+1;
+
+  /* ===== FLSM по количеству ===== */
+  else if(mode.value === 'flsmCount'){
+    let n = +flsmCount.value;
+    if(n < 1) return;
+
+    if(n > 1000){
+      vlsmError.textContent = 'Показаны первые 1000 подсетей';
+      n = 1000; // ← ключевая строка
+    }
+
+    let pref = ipState.prefix + Math.ceil(Math.log2(n));
+    prefixes = Array(n).fill(pref);
+    reqHosts = Array(n).fill(0);
   }
+
+  /* ===== FLSM по хостам ===== */
+  else if(mode.value === 'flsmHosts'){
+    let h = +flsmHosts.value;
+    if(h < 1) return;
+
+    let pref = 32 - Math.ceil(Math.log2(h + 2));
+    let subnetSize = 2 ** (32 - pref);
+    let count = Math.floor(ipState.total / subnetSize);
+
+    if(count < 1){
+      vlsmError.textContent = 'Слишком много хостов для сети';
+      return;
+    }
+
+    if(count > 1000){
+      vlsmError.textContent = 'Слишком много подсетей (макс 1000)';
+      count = 1000; // ← считаем только первые 1000
+    }
+
+    prefixes = Array(count).fill(pref);
+    reqHosts = Array(count).fill(h);
+  }
+
+  /* ===== Генерация таблицы ===== */
+  for(let i = 0; i < prefixes.length; i++){
+    let pref = prefixes[i];
+    let size = 2 ** (32 - pref);
+    let bc   = cur + size - 1;
+
+    if(bc > end){
+      vlsmError.textContent = 'Подсети выходят за пределы сети';
+      break;
+    }
+
+    let first  = pref >= 31 ? cur : cur + 1;
+    let last   = pref >= 31 ? bc  : bc - 1;
+    let usable = pref >= 31 ? size : size - 2;
+
+    let unused = mode.value === 'vlsm'
+      ? Math.max(0, usable - (reqHosts[i] || 0))
+      : 0;
+
+    let tr = document.createElement('tr');
+    tr.innerHTML = `
+<td>${i+1}</td>
+<td>${intToIp(cur)}</td>
+<td>/${pref}</td>
+<td>${intToIp(maskFromPrefix(pref))}</td>
+<td>${size}</td>
+<td>${usable}</td>
+<td>${unused}</td>
+<td>${intToIp(first)}</td>
+<td>${intToIp(last)}</td>
+<td>${intToIp(bc)}</td>`;
+
+    tbody.appendChild(tr);
+    cur = bc + 1;
+  }
+
   vlsmTable.classList.remove('hidden');
 }
-
 /* Таблица масок */
 const mb=document.getElementById('maskBody');
 for(let p=0;p<=32;p++){
