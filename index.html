@@ -50,7 +50,7 @@ body.colorGradient{
 body{ background:var(--bg); color:var(--fg); font-family:Arial,sans-serif; margin:16px; transition: background 0.5s, color 0.5s;}
 label{display:block;margin-top:10px;font-weight:600}
 input,select,button{ background:var(--panel); color:var(--fg); border:1px solid var(--border); padding:6px; font:inherit; }
-input,select{width:100%} button{cursor:pointer; margin-right:6px;}
+input,select{width:100%; box-sizing: border-box;} button{cursor:pointer; margin-right:6px; margin-bottom:6px;}
 table{width:100%;border-collapse:collapse;margin-top:10px; table-layout: fixed;}
 th,td{ padding:6px 4px; border:1px solid var(--border); font-family:monospace; word-wrap: break-word; text-align:center;}
 th{background:var(--panel); font-family:inherit; position: sticky; top:0; z-index:2;}
@@ -70,6 +70,7 @@ th{background:var(--panel); font-family:inherit; position: sticky; top:0; z-inde
   <button onclick="toggle('maskTable')">Таблица масок</button>
   <button onclick="showNetwork()">Сеть</button>
   <button onclick="toggle('tab-vlsm')">Деление сети</button>
+  <button onclick="toggle('tab-converter')"Система счисления</button>
   <button onclick="cycleTheme()">Тема</button>
 </div>
 
@@ -152,6 +153,25 @@ th{background:var(--panel); font-family:inherit; position: sticky; top:0; z-inde
 </thead>
 <tbody></tbody>
 </table>
+</div>
+</div>
+
+<!-- НОВАЯ ВКЛАДКА: Конвертер систем счисления -->
+<div id="tab-converter" class="hidden">
+  <h2>Конвертер систем счисления</h2>
+  <p style="font-size: 0.9em; opacity: 0.8;">Введите число в любое из полей, остальные заполнятся автоматически.</p>
+  
+  <label>Десятичная (DEC)</label>
+  <input id="convDec" type="text" placeholder="Например: 255">
+  
+  <label>Двоичная (BIN)</label>
+  <input id="convBin" type="text" placeholder="Например: 11111111">
+  
+  <label>Шестнадцатеричная (HEX)</label>
+  <input id="convHex" type="text" placeholder="Например: ff">
+  
+  <label>Восьмеричная (OCT)</label>
+  <input id="convOct" type="text" placeholder="Например: 377">
 </div>
 
 <script>
@@ -257,7 +277,7 @@ function calcVLSM(){
 
     if(n > 1000){
       vlsmError.textContent = 'Показаны первые 1000 подсетей';
-      n = 1000; // ← ключевая строка
+      n = 1000; 
     }
 
     let pref = ipState.prefix + Math.ceil(Math.log2(n));
@@ -281,7 +301,7 @@ function calcVLSM(){
 
     if(count > 1000){
       vlsmError.textContent = 'Слишком много подсетей (макс 1000)';
-      count = 1000; // ← считаем только первые 1000
+      count = 1000; 
     }
 
     prefixes = Array(count).fill(pref);
@@ -338,6 +358,38 @@ for(let p=0;p<=32;p++){
 <td>/${p}</td><td>${intToIp(mask)}</td><td>${step} (в ${oct}-м октете)</td>
 <td>${usable}</td><td>${total}</td><td>${bits}</td><td>${intToIp(wildcard)}</td></tr>`;
 }
+
+/* ===== Логика Конвертера СС ===== */
+const cDec = document.getElementById('convDec');
+const cBin = document.getElementById('convBin');
+const cHex = document.getElementById('convHex');
+const cOct = document.getElementById('convOct');
+
+function syncConverter(source, base) {
+  let val = source.value.trim();
+  if (!val) {
+    cDec.value = cBin.value = cHex.value = cOct.value = '';
+    return;
+  }
+  
+  // Переводим введённое значение в число в зависимости от системы счисления
+  let num = parseInt(val, base);
+  
+  // Если ввод некорректен, прерываем функцию (не перезаписываем поля NaN)
+  if (isNaN(num)) return;
+  
+  // Обновляем только те поля, которые в данный момент не редактируются
+  if (source !== cDec) cDec.value = num.toString(10);
+  if (source !== cBin) cBin.value = num.toString(2);
+  if (source !== cHex) cHex.value = num.toString(16);
+  if (source !== cOct) cOct.value = num.toString(8);
+}
+
+// Привязываем события ввода к каждому полю
+cDec.oninput = () => syncConverter(cDec, 10);
+cBin.oninput = () => syncConverter(cBin, 2);
+cHex.oninput = () => syncConverter(cHex, 16);
+cOct.oninput = () => syncConverter(cOct, 8);
 </script>
 </body>
 </html>
